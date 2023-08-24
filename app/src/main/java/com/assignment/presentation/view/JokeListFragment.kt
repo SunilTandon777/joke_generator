@@ -24,7 +24,7 @@ class JokeListFragment : Fragment() {
     private var timer: Timer? = null
 
     companion object{
-        const val TIMES: Long = 6
+        const val TIMES: Long = 60
         const val SECOND: Long = 1000
     }
 
