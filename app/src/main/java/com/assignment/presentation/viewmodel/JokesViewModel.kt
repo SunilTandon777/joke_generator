@@ -2,8 +2,8 @@ package com.assignment.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.assignment.domain.use_cases.FetchLocalJokes
 import com.assignment.domain.use_cases.FetchJokesFromApi
+import com.assignment.domain.use_cases.FetchLocalJokes
 import com.assignment.domain.use_cases.UpdateJokeIntoDB
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,7 +23,7 @@ class JokesViewModel(
                 if (response.isSuccessful) {
                     response.body()?.let { dataModel ->
                         dataModel.timeStamp = System.currentTimeMillis()
-                        val id = updateJokeIntoDB.invoke(dataModel)
+                        updateJokeIntoDB.invoke(dataModel)
                     }
                 }
             } catch (e: Exception) {

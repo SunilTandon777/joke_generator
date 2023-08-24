@@ -6,7 +6,7 @@ import com.assignment.room.JokeModelEntity
 
 class LocalSource(private val roomDB: RoomDB) {
     suspend fun getJokesFromDB(): LiveData<List<JokeModelEntity>> {
-        return roomDB.getDataDao().getAll()
+        return roomDB.getDataDao().getStoredJokes()
     }
 
     suspend fun insertJoke(jokeModelEntity: JokeModelEntity): Long {
