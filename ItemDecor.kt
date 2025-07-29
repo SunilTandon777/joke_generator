@@ -2,7 +2,7 @@
  * Created by Mark O'Sullivan on 25th February 2018.
  */
 @SuppressLint("RtlHardcoded")
-class ItemDecor : ViewGroup {
+class ItemDecor : ConstraintLayout {
     /**
      * Main view is the view which is shown when the layout is closed.
      */
@@ -56,19 +56,21 @@ class ItemDecor : ViewGroup {
     private var mDragHelper: ViewDragHelper? = null
     private var mGestureDetector: GestureDetectorCompat? = null
 
-    constructor(context: Context?) : super(context) {
+    constructor(context: Context?) : super(context!!) {
         init(context, null)
     }
 
-    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
+    constructor(context: Context?, attrs: AttributeSet?) : super(context!!, attrs) {
         init(context, attrs)
     }
 
     constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(
-        context,
+        context!!,
         attrs,
         defStyleAttr
-    )
+    ) {
+        init(context, attrs)
+    }
 
     override fun onSaveInstanceState(): Parcelable? {
         val bundle = Bundle()
@@ -121,203 +123,32 @@ class ItemDecor : ViewGroup {
     }
 
     /**
-     * {@inheritDoc}
+     * Override onLayout to handle swipe reveal positioning while letting ConstraintLayout
+     * handle the initial constraint-based positioning
      */
-    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        for (index in 0 until childCount) {
-            val child = getChildAt(index)
-            var left: Int
-            var right: Int
-            var top: Int
-            var bottom: Int
-            bottom = 0
-            top = bottom
-            right = top
-            left = right
-            val minLeft = getPaddingLeft()
-            val maxRight = max((r - getPaddingRight() - l).toDouble(), 0.0).toInt()
-            val minTop = paddingTop
-            val maxBottom = max((b - paddingBottom - t).toDouble(), 0.0).toInt()
-            var measuredChildHeight = child.measuredHeight
-            var measuredChildWidth = child.measuredWidth
-
-            // need to take account if child size is match_parent
-            val childParams = child.layoutParams
-            var matchParentHeight = false
-            var matchParentWidth = false
-            if (childParams != null) {
-                matchParentHeight =
-                    childParams.height == LayoutParams.MATCH_PARENT || childParams.height == LayoutParams.FILL_PARENT
-                matchParentWidth =
-                    childParams.width == LayoutParams.MATCH_PARENT || childParams.width == LayoutParams.FILL_PARENT
-            }
-            if (matchParentHeight) {
-                measuredChildHeight = maxBottom - minTop
-                childParams!!.height = measuredChildHeight
-            }
-            if (matchParentWidth) {
-                measuredChildWidth = maxRight - minLeft
-                childParams!!.width = measuredChildWidth
-            }
-            when (mDragEdge) {
-                DRAG_EDGE_RIGHT -> {
-                    left = max(
-                        (r - measuredChildWidth - getPaddingRight() - l).toDouble(),
-                        minLeft.toDouble()
-                    )
-                        .toInt()
-                    top = min(paddingTop.toDouble(), maxBottom.toDouble()).toInt()
-                    right =
-                        max((r - getPaddingRight() - l).toDouble(), minLeft.toDouble()).toInt()
-                    bottom =
-                        min((measuredChildHeight + paddingTop).toDouble(), maxBottom.toDouble())
-                            .toInt()
-                }
-
-                DRAG_EDGE_LEFT -> {
-                    left = min(getPaddingLeft().toDouble(), maxRight.toDouble()).toInt()
-                    top = min(paddingTop.toDouble(), maxBottom.toDouble()).toInt()
-                    right =
-                        min((measuredChildWidth + getPaddingLeft()).toDouble(), maxRight.toDouble())
-                            .toInt()
-                    bottom =
-                        min((measuredChildHeight + paddingTop).toDouble(), maxBottom.toDouble())
-                            .toInt()
-                }
-            }
-            child.layout(left, top, right, bottom)
-        }
-
-        // taking account offset when mode is SAME_LEVEL
-        if (mMode == MODE_SAME_LEVEL) {
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        // Let ConstraintLayout do its normal layout first
+        super.onLayout(changed, left, top, right, bottom)
+        
+        // Store the constraint-based positions as our base positions
+        initRects()
+        
+        // Apply any offset for SAME_LEVEL mode
+        if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
             when (mDragEdge) {
                 DRAG_EDGE_LEFT -> mSecondaryView!!.offsetLeftAndRight(-mSecondaryView!!.width)
-                DRAG_EDGE_RIGHT -> mSecondaryView!!.offsetLeftAndRight(
-                    mSecondaryView!!.width
-                )
+                DRAG_EDGE_RIGHT -> mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
             }
+            // Update rects after offset
+            initRects()
         }
-        initRects()
+        
+        // Apply initial state (open/closed)
         if (mIsOpenBeforeInit) {
             open(false)
         } else {
             close(false)
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        if (childCount < 2) {
-            throw RuntimeException("Layout must have two children")
-        }
-
-        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
-        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
-        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
-        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
-
-        var maxChildWidth = 0
-        var maxChildHeight = 0
-
-        // Measure all children first to get their preferred sizes
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            val childParams = child.layoutParams
-
-            // Create appropriate measure specs for children
-            val childWidthSpec = when {
-                childParams.width == LayoutParams.MATCH_PARENT -> {
-                    if (widthMode == MeasureSpec.UNSPECIFIED) {
-                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                    } else {
-                        MeasureSpec.makeMeasureSpec(widthSize - paddingLeft - paddingRight, MeasureSpec.EXACTLY)
-                    }
-                }
-                childParams.width == LayoutParams.WRAP_CONTENT -> {
-                    if (widthMode == MeasureSpec.UNSPECIFIED) {
-                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                    } else {
-                        MeasureSpec.makeMeasureSpec(widthSize - paddingLeft - paddingRight, MeasureSpec.AT_MOST)
-                    }
-                }
-                else -> MeasureSpec.makeMeasureSpec(childParams.width, MeasureSpec.EXACTLY)
-            }
-
-            val childHeightSpec = when {
-                childParams.height == LayoutParams.MATCH_PARENT -> {
-                    if (heightMode == MeasureSpec.UNSPECIFIED) {
-                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                    } else {
-                        MeasureSpec.makeMeasureSpec(heightSize - paddingTop - paddingBottom, MeasureSpec.EXACTLY)
-                    }
-                }
-                childParams.height == LayoutParams.WRAP_CONTENT -> {
-                    if (heightMode == MeasureSpec.UNSPECIFIED) {
-                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                    } else {
-                        MeasureSpec.makeMeasureSpec(heightSize - paddingTop - paddingBottom, MeasureSpec.AT_MOST)
-                    }
-                }
-                else -> MeasureSpec.makeMeasureSpec(childParams.height, MeasureSpec.EXACTLY)
-            }
-
-            child.measure(childWidthSpec, childHeightSpec)
-            maxChildWidth = max(child.measuredWidth, maxChildWidth)
-            maxChildHeight = max(child.measuredHeight, maxChildHeight)
-        }
-
-        // Calculate our desired dimensions
-        var desiredWidth = maxChildWidth + paddingLeft + paddingRight
-        var desiredHeight = maxChildHeight + paddingTop + paddingBottom
-
-        // Apply constraints based on our own layout params and measure spec
-        val finalWidth = when (widthMode) {
-            MeasureSpec.EXACTLY -> widthSize
-            MeasureSpec.AT_MOST -> min(desiredWidth, widthSize)
-            MeasureSpec.UNSPECIFIED -> desiredWidth
-            else -> desiredWidth
-        }
-
-        val finalHeight = when (heightMode) {
-            MeasureSpec.EXACTLY -> heightSize
-            MeasureSpec.AT_MOST -> min(desiredHeight, heightSize)
-            MeasureSpec.UNSPECIFIED -> desiredHeight
-            else -> desiredHeight
-        }
-
-        // Re-measure children that have MATCH_PARENT with our final dimensions
-        val finalContentWidth = finalWidth - paddingLeft - paddingRight
-        val finalContentHeight = finalHeight - paddingTop - paddingBottom
-
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            val childParams = child.layoutParams
-            var needsRemeasure = false
-
-            val childWidthSpec = when {
-                childParams.width == LayoutParams.MATCH_PARENT -> {
-                    needsRemeasure = true
-                    MeasureSpec.makeMeasureSpec(finalContentWidth, MeasureSpec.EXACTLY)
-                }
-                else -> MeasureSpec.makeMeasureSpec(child.measuredWidth, MeasureSpec.EXACTLY)
-            }
-
-            val childHeightSpec = when {
-                childParams.height == LayoutParams.MATCH_PARENT -> {
-                    needsRemeasure = true
-                    MeasureSpec.makeMeasureSpec(finalContentHeight, MeasureSpec.EXACTLY)
-                }
-                else -> MeasureSpec.makeMeasureSpec(child.measuredHeight, MeasureSpec.EXACTLY)
-            }
-
-            if (needsRemeasure) {
-                child.measure(childWidthSpec, childHeightSpec)
-            }
-        }
-
-        setMeasuredDimension(finalWidth, finalHeight)
     }
 
     override fun computeScroll() {
@@ -331,6 +162,8 @@ class ItemDecor : ViewGroup {
      */
     fun open(animation: Boolean) {
         mIsOpenBeforeInit = true
+        if (mMainView == null || mSecondaryView == null) return
+        
         if (animation) {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainOpen.left, mRectMainOpen.top)
         } else {
@@ -356,6 +189,8 @@ class ItemDecor : ViewGroup {
      */
     fun close(animation: Boolean) {
         mIsOpenBeforeInit = false
+        if (mMainView == null || mSecondaryView == null) return
+        
         if (animation) {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
@@ -385,8 +220,8 @@ class ItemDecor : ViewGroup {
 
     private val mainOpenLeft: Int
         get() = when (mDragEdge) {
-            DRAG_EDGE_LEFT -> mRectMainClose.left + mSecondaryView!!.width
-            DRAG_EDGE_RIGHT -> mRectMainClose.left - mSecondaryView!!.width
+            DRAG_EDGE_LEFT -> mRectMainClose.left + (mSecondaryView?.width ?: 0)
+            DRAG_EDGE_RIGHT -> mRectMainClose.left - (mSecondaryView?.width ?: 0)
             else -> 0
         }
     private val mainOpenTop: Int
@@ -403,10 +238,12 @@ class ItemDecor : ViewGroup {
         get() = mRectSecClose.top
 
     private fun initRects() {
-        // close position of main view
+        if (mMainView == null || mSecondaryView == null) return
+        
+        // close position of main view (current constraint-based position)
         mRectMainClose[mMainView!!.left, mMainView!!.top, mMainView!!.right] = mMainView!!.bottom
 
-        // close position of secondary view
+        // close position of secondary view (current constraint-based position)
         mRectSecClose[mSecondaryView!!.left, mSecondaryView!!.top, mSecondaryView!!.right] =
             mSecondaryView!!.bottom
 
@@ -424,6 +261,7 @@ class ItemDecor : ViewGroup {
     }
 
     private fun isInMainView(ev: MotionEvent): Boolean {
+        if (mMainView == null) return false
         val x = ev.x
         val y = ev.y
         val withinVertical = mMainView!!.top <= y && y <= mMainView!!.bottom
@@ -511,6 +349,7 @@ class ItemDecor : ViewGroup {
         }
     private val distToClosestEdge: Int
         private get() {
+            if (mMainView == null || mSecondaryView == null) return 0
             when (mDragEdge) {
                 DRAG_EDGE_LEFT -> {
                     val pivotRight = mRectMainClose.left + mSecondaryView!!.width
@@ -538,6 +377,7 @@ class ItemDecor : ViewGroup {
         }
     private val halfwayPivotHorizontal: Int
         private get() {
+            if (mSecondaryView == null) return 0
             return if (mDragEdge == DRAG_EDGE_LEFT) {
                 mRectMainClose.left + mSecondaryView!!.width / 2
             } else {
@@ -546,12 +386,13 @@ class ItemDecor : ViewGroup {
         }
     private val mDragHelperCallback: ViewDragHelper.Callback = object : ViewDragHelper.Callback() {
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
-            if (isDragLocked) return false
+            if (isDragLocked || mMainView == null) return false
             mDragHelper!!.captureChildView(mMainView!!, pointerId)
             return false
         }
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
+            if (mSecondaryView == null) return child.left
             return when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> max(
                     min(left.toDouble(), mRectMainClose.left.toDouble()),
@@ -571,6 +412,7 @@ class ItemDecor : ViewGroup {
         }
 
         override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
+            if (mMainView == null) return
             val velRightExceeded = pxToDp(xvel.toInt()) >= mMinFlingVelocity
             val velLeftExceeded = pxToDp(xvel.toInt()) <= -mMinFlingVelocity
             val pivotHorizontal: Int = halfwayPivotHorizontal
@@ -603,7 +445,7 @@ class ItemDecor : ViewGroup {
 
         override fun onEdgeDragStarted(edgeFlags: Int, pointerId: Int) {
             super.onEdgeDragStarted(edgeFlags, pointerId)
-            if (isDragLocked) {
+            if (isDragLocked || mMainView == null) {
                 return
             }
             val edgeStartLeft = (mDragEdge == DRAG_EDGE_RIGHT
@@ -623,7 +465,7 @@ class ItemDecor : ViewGroup {
             dy: Int
         ) {
             super.onViewPositionChanged(changedView, left, top, dx, dy)
-            if (mMode == MODE_SAME_LEVEL) {
+            if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
                 if (mDragEdge == DRAG_EDGE_LEFT || mDragEdge == DRAG_EDGE_RIGHT) {
                     mSecondaryView!!.offsetLeftAndRight(dx)
                 } else {
