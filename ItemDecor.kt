@@ -124,30 +124,53 @@ class ItemDecor : ConstraintLayout {
 
     /**
      * Override onLayout to handle swipe reveal positioning while letting ConstraintLayout
-     * handle the initial constraint-based positioning
+     * handle the initial constraint-based positioning and dynamic sizing
      */
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        // Let ConstraintLayout do its normal layout first
+        // Let ConstraintLayout do its normal layout first - this handles all constraints
+        // including dynamic height matching between views
         super.onLayout(changed, left, top, right, bottom)
         
+        // Only proceed if we have both views
+        if (mMainView == null || mSecondaryView == null) return
+        
         // Store the constraint-based positions as our base positions
+        // These positions now reflect the dynamic sizing from ConstraintLayout
         initRects()
         
-        // Apply any offset for SAME_LEVEL mode
-        if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
+        // Apply any offset for SAME_LEVEL mode after constraint layout is complete
+        if (mMode == MODE_SAME_LEVEL) {
             when (mDragEdge) {
-                DRAG_EDGE_LEFT -> mSecondaryView!!.offsetLeftAndRight(-mSecondaryView!!.width)
-                DRAG_EDGE_RIGHT -> mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
+                DRAG_EDGE_LEFT -> {
+                    mSecondaryView!!.offsetLeftAndRight(-mSecondaryView!!.width)
+                }
+                DRAG_EDGE_RIGHT -> {
+                    mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
+                }
             }
-            // Update rects after offset
+            // Update rects after offset to reflect the new positions
             initRects()
         }
         
-        // Apply initial state (open/closed)
+        // Apply initial state (open/closed) based on current positions
         if (mIsOpenBeforeInit) {
             open(false)
         } else {
             close(false)
+        }
+    }
+
+    /**
+     * Override onMeasure to ensure proper measurement while maintaining ConstraintLayout's
+     * dynamic sizing capabilities
+     */
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // Let ConstraintLayout handle all the measurement including constraint-based sizing
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        
+        // Ensure we have at least 2 children for swipe functionality
+        if (childCount < 2) {
+            throw RuntimeException("ItemDecor must have two children for swipe functionality")
         }
     }
 
@@ -168,12 +191,14 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainOpen.left, mRectMainOpen.top)
         } else {
             mDragHelper!!.abort()
+            // Use the dynamically calculated positions
             mMainView!!.layout(
                 mRectMainOpen.left,
                 mRectMainOpen.top,
                 mRectMainOpen.right,
                 mRectMainOpen.bottom
             )
+            // Secondary view maintains its constraint-based size and position
             mSecondaryView!!.layout(
                 mRectSecOpen.left,
                 mRectSecOpen.top,
@@ -195,12 +220,14 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
             mDragHelper!!.abort()
+            // Use the dynamically calculated positions
             mMainView!!.layout(
                 mRectMainClose.left,
                 mRectMainClose.top,
                 mRectMainClose.right,
                 mRectMainClose.bottom
             )
+            // Secondary view maintains its constraint-based size and position
             mSecondaryView!!.layout(
                 mRectSecClose.left,
                 mRectSecClose.top,
@@ -240,20 +267,36 @@ class ItemDecor : ConstraintLayout {
     private fun initRects() {
         if (mMainView == null || mSecondaryView == null) return
         
-        // close position of main view (current constraint-based position)
-        mRectMainClose[mMainView!!.left, mMainView!!.top, mMainView!!.right] = mMainView!!.bottom
+        // Store current constraint-based positions as base positions
+        // These positions now include any dynamic sizing from constraints
+        mRectMainClose.set(
+            mMainView!!.left, 
+            mMainView!!.top, 
+            mMainView!!.right, 
+            mMainView!!.bottom
+        )
 
-        // close position of secondary view (current constraint-based position)
-        mRectSecClose[mSecondaryView!!.left, mSecondaryView!!.top, mSecondaryView!!.right] =
+        mRectSecClose.set(
+            mSecondaryView!!.left, 
+            mSecondaryView!!.top, 
+            mSecondaryView!!.right,
             mSecondaryView!!.bottom
+        )
 
-        // open position of the main view
-        mRectMainOpen[mainOpenLeft, mainOpenTop, mainOpenLeft + mMainView!!.width] =
+        // Calculate open positions based on current (potentially dynamic) sizes
+        mRectMainOpen.set(
+            mainOpenLeft, 
+            mainOpenTop, 
+            mainOpenLeft + mMainView!!.width,
             mainOpenTop + mMainView!!.height
+        )
 
-        // open position of the secondary view
-        mRectSecOpen[secOpenLeft, secOpenTop, secOpenLeft + mSecondaryView!!.width] =
+        mRectSecOpen.set(
+            secOpenLeft, 
+            secOpenTop, 
+            secOpenLeft + mSecondaryView!!.width,
             secOpenTop + mSecondaryView!!.height
+        )
     }
 
     private fun couldBecomeClick(ev: MotionEvent): Boolean {
