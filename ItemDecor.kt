@@ -153,11 +153,22 @@ class ItemDecor : ConstraintLayout {
         }
         
         // Apply initial state (open/closed) based on current positions
-        if (mIsOpenBeforeInit) {
-            open(false)
-        } else {
-            close(false)
+        // Only if we're not currently in a drag operation
+        if (!isDragging()) {
+            if (mIsOpenBeforeInit) {
+                open(false)
+            } else {
+                close(false)
+            }
         }
+    }
+
+    /**
+     * Check if we're currently in a drag operation
+     */
+    private fun isDragging(): Boolean {
+        return mDragHelper?.viewDragState == ViewDragHelper.STATE_DRAGGING ||
+               mDragHelper?.viewDragState == ViewDragHelper.STATE_SETTLING
     }
 
     /**
@@ -191,15 +202,16 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainOpen.left, mRectMainOpen.top)
         } else {
             mDragHelper!!.abort()
-            // Use the dynamically calculated positions
-            mMainView!!.layout(
+            // Use the dynamically calculated positions with proper bounds checking
+            layoutViewSafely(
+                mMainView!!,
                 mRectMainOpen.left,
                 mRectMainOpen.top,
                 mRectMainOpen.right,
                 mRectMainOpen.bottom
             )
-            // Secondary view maintains its constraint-based size and position
-            mSecondaryView!!.layout(
+            layoutViewSafely(
+                mSecondaryView!!,
                 mRectSecOpen.left,
                 mRectSecOpen.top,
                 mRectSecOpen.right,
@@ -220,15 +232,16 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
             mDragHelper!!.abort()
-            // Use the dynamically calculated positions
-            mMainView!!.layout(
+            // Use the dynamically calculated positions with proper bounds checking
+            layoutViewSafely(
+                mMainView!!,
                 mRectMainClose.left,
                 mRectMainClose.top,
                 mRectMainClose.right,
                 mRectMainClose.bottom
             )
-            // Secondary view maintains its constraint-based size and position
-            mSecondaryView!!.layout(
+            layoutViewSafely(
+                mSecondaryView!!,
                 mRectSecClose.left,
                 mRectSecClose.top,
                 mRectSecClose.right,
@@ -236,6 +249,25 @@ class ItemDecor : ConstraintLayout {
             )
         }
         ViewCompat.postInvalidateOnAnimation(this)
+    }
+
+    /**
+     * Layout a view safely with bounds checking to prevent layout corruption
+     */
+    private fun layoutViewSafely(view: View, left: Int, top: Int, right: Int, bottom: Int) {
+        // Ensure the bounds are valid
+        if (left >= right || top >= bottom) return
+        
+        // Ensure the view stays within the parent bounds
+        val parentWidth = width
+        val parentHeight = height
+        
+        val safeLeft = max(0, min(left, parentWidth - view.measuredWidth))
+        val safeTop = max(0, min(top, parentHeight - view.measuredHeight))
+        val safeRight = min(parentWidth, max(right, safeLeft + view.measuredWidth))
+        val safeBottom = min(parentHeight, max(bottom, safeTop + view.measuredHeight))
+        
+        view.layout(safeLeft, safeTop, safeRight, safeBottom)
     }
 
     /**
@@ -439,21 +471,24 @@ class ItemDecor : ConstraintLayout {
         }
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
-            if (mSecondaryView == null) return child.left
+            if (mSecondaryView == null || mMainView == null) return child.left
+            
+            // Ensure we're only moving the main view
+            if (child != mMainView) return child.left
             
             return when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> {
                     // For right edge drag, limit swipe to the left by secondary view width
                     val minLeft = mRectMainClose.left - mSecondaryView!!.width
                     val maxLeft = mRectMainClose.left
-                    max(min(left.toDouble(), maxLeft.toDouble()), minLeft.toDouble()).toInt()
+                    max(min(left, maxLeft), minLeft)
                 }
 
                 DRAG_EDGE_LEFT -> {
                     // For left edge drag, limit swipe to the right by secondary view width  
                     val minLeft = mRectMainClose.left
                     val maxLeft = mRectMainClose.left + mSecondaryView!!.width
-                    max(min(left.toDouble(), maxLeft.toDouble()), minLeft.toDouble()).toInt()
+                    max(min(left, maxLeft), minLeft)
                 }
 
                 else -> child.left
@@ -462,12 +497,17 @@ class ItemDecor : ConstraintLayout {
 
         override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
             // Prevent vertical movement during horizontal swipe
-            return mRectMainClose.top
+            // Only clamp the main view, let secondary view maintain its position
+            return if (child == mMainView) {
+                mRectMainClose.top
+            } else {
+                child.top
+            }
         }
 
         override fun getViewHorizontalDragRange(child: View): Int {
             // Return the maximum horizontal drag range based on secondary view width
-            return if (mSecondaryView != null) {
+            return if (mSecondaryView != null && child == mMainView) {
                 mSecondaryView!!.width
             } else {
                 0
@@ -481,10 +521,10 @@ class ItemDecor : ConstraintLayout {
 
         override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
             if (mMainView == null || mSecondaryView == null) return
+            if (releasedChild != mMainView) return
             
             val velRightExceeded = pxToDp(xvel.toInt()) >= mMinFlingVelocity
             val velLeftExceeded = pxToDp(xvel.toInt()) <= -mMinFlingVelocity
-            val pivotHorizontal: Int = halfwayPivotHorizontal
             
             when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> {
@@ -496,7 +536,6 @@ class ItemDecor : ConstraintLayout {
                         // Use position-based logic for snap decision
                         val currentLeft = mMainView!!.left
                         val closedLeft = mRectMainClose.left
-                        val openLeft = mRectMainClose.left - mSecondaryView!!.width
                         val threshold = closedLeft - (mSecondaryView!!.width / 2)
                         
                         if (currentLeft < threshold) {
@@ -516,7 +555,6 @@ class ItemDecor : ConstraintLayout {
                         // Use position-based logic for snap decision
                         val currentLeft = mMainView!!.left
                         val closedLeft = mRectMainClose.left
-                        val openLeft = mRectMainClose.left + mSecondaryView!!.width
                         val threshold = closedLeft + (mSecondaryView!!.width / 2)
                         
                         if (currentLeft > threshold) {
@@ -551,7 +589,28 @@ class ItemDecor : ConstraintLayout {
             dy: Int
         ) {
             super.onViewPositionChanged(changedView, left, top, dx, dy)
-            if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
+            
+            // Only handle position changes for the main view
+            if (changedView != mMainView || mSecondaryView == null) return
+            
+            // Ensure the main view stays within proper bounds
+            val parentWidth = width
+            val parentHeight = height
+            
+            if (left < 0 || left + changedView.width > parentWidth ||
+                top < 0 || top + changedView.height > parentHeight) {
+                // If view goes out of bounds, snap it back
+                post {
+                    if (mIsOpenBeforeInit) {
+                        open(false)
+                    } else {
+                        close(false)
+                    }
+                }
+                return
+            }
+            
+            if (mMode == MODE_SAME_LEVEL) {
                 if (mDragEdge == DRAG_EDGE_LEFT || mDragEdge == DRAG_EDGE_RIGHT) {
                     mSecondaryView!!.offsetLeftAndRight(dx)
                 } else {
