@@ -395,25 +395,19 @@ class ItemDecor : ConstraintLayout {
             if (mMainView == null || mSecondaryView == null) return 0
             when (mDragEdge) {
                 DRAG_EDGE_LEFT -> {
-                    val pivotRight = mRectMainClose.left + mSecondaryView!!.width
-                    return min(
-                        (
-                                mMainView!!.left - mRectMainClose.left).toDouble(),
-                        (
-                                pivotRight - mMainView!!.left
-                                ).toDouble()
-                    ).toInt()
+                    // Distance from current position to closed position or max open position
+                    val distToClosed = abs(mMainView!!.left - mRectMainClose.left)
+                    val maxOpenLeft = mRectMainClose.left + mSecondaryView!!.width
+                    val distToMaxOpen = abs(mMainView!!.left - maxOpenLeft)
+                    return min(distToClosed, distToMaxOpen)
                 }
 
                 DRAG_EDGE_RIGHT -> {
-                    val pivotLeft = mRectMainClose.right - mSecondaryView!!.width
-                    return min(
-                        (
-                                mMainView!!.right - pivotLeft).toDouble(),
-                        (
-                                mRectMainClose.right - mMainView!!.right
-                                ).toDouble()
-                    ).toInt()
+                    // Distance from current position to closed position or max open position
+                    val distToClosed = abs(mMainView!!.left - mRectMainClose.left)
+                    val maxOpenLeft = mRectMainClose.left - mSecondaryView!!.width
+                    val distToMaxOpen = abs(mMainView!!.left - maxOpenLeft)
+                    return min(distToClosed, distToMaxOpen)
                 }
             }
             return 0
@@ -421,10 +415,20 @@ class ItemDecor : ConstraintLayout {
     private val halfwayPivotHorizontal: Int
         private get() {
             if (mSecondaryView == null) return 0
-            return if (mDragEdge == DRAG_EDGE_LEFT) {
-                mRectMainClose.left + mSecondaryView!!.width / 2
-            } else {
-                mRectMainClose.right - mSecondaryView!!.width / 2
+            return when (mDragEdge) {
+                DRAG_EDGE_LEFT -> {
+                    // Halfway point between closed and fully open position
+                    val closedLeft = mRectMainClose.left
+                    val openLeft = mRectMainClose.left + mSecondaryView!!.width
+                    closedLeft + (openLeft - closedLeft) / 2
+                }
+                DRAG_EDGE_RIGHT -> {
+                    // Halfway point between closed and fully open position
+                    val closedLeft = mRectMainClose.left
+                    val openLeft = mRectMainClose.left - mSecondaryView!!.width
+                    closedLeft + (openLeft - closedLeft) / 2
+                }
+                else -> 0
             }
         }
     private val mDragHelperCallback: ViewDragHelper.Callback = object : ViewDragHelper.Callback() {
@@ -436,51 +440,90 @@ class ItemDecor : ConstraintLayout {
 
         override fun clampViewPositionHorizontal(child: View, left: Int, dx: Int): Int {
             if (mSecondaryView == null) return child.left
+            
             return when (mDragEdge) {
-                DRAG_EDGE_RIGHT -> max(
-                    min(left.toDouble(), mRectMainClose.left.toDouble()),
-                    (
-                            mRectMainClose.left - mSecondaryView!!.width
-                            ).toDouble()
-                ).toInt()
+                DRAG_EDGE_RIGHT -> {
+                    // For right edge drag, limit swipe to the left by secondary view width
+                    val minLeft = mRectMainClose.left - mSecondaryView!!.width
+                    val maxLeft = mRectMainClose.left
+                    max(min(left.toDouble(), maxLeft.toDouble()), minLeft.toDouble()).toInt()
+                }
 
-                DRAG_EDGE_LEFT -> max(
-                    min(left.toDouble(), (mRectMainClose.left + mSecondaryView!!.width).toDouble()),
-                    mRectMainClose.left
-                        .toDouble()
-                ).toInt()
+                DRAG_EDGE_LEFT -> {
+                    // For left edge drag, limit swipe to the right by secondary view width  
+                    val minLeft = mRectMainClose.left
+                    val maxLeft = mRectMainClose.left + mSecondaryView!!.width
+                    max(min(left.toDouble(), maxLeft.toDouble()), minLeft.toDouble()).toInt()
+                }
 
                 else -> child.left
             }
         }
 
+        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
+            // Prevent vertical movement during horizontal swipe
+            return mRectMainClose.top
+        }
+
+        override fun getViewHorizontalDragRange(child: View): Int {
+            // Return the maximum horizontal drag range based on secondary view width
+            return if (mSecondaryView != null) {
+                mSecondaryView!!.width
+            } else {
+                0
+            }
+        }
+
+        override fun getViewVerticalDragRange(child: View): Int {
+            // No vertical drag allowed
+            return 0
+        }
+
         override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
-            if (mMainView == null) return
+            if (mMainView == null || mSecondaryView == null) return
+            
             val velRightExceeded = pxToDp(xvel.toInt()) >= mMinFlingVelocity
             val velLeftExceeded = pxToDp(xvel.toInt()) <= -mMinFlingVelocity
             val pivotHorizontal: Int = halfwayPivotHorizontal
+            
             when (mDragEdge) {
-                DRAG_EDGE_RIGHT -> if (velRightExceeded) {
-                    close(true)
-                } else if (velLeftExceeded) {
-                    open(true)
-                } else {
-                    if (mMainView!!.right < pivotHorizontal) {
+                DRAG_EDGE_RIGHT -> {
+                    if (velRightExceeded) {
+                        close(true)
+                    } else if (velLeftExceeded) {
                         open(true)
                     } else {
-                        close(true)
+                        // Use position-based logic for snap decision
+                        val currentLeft = mMainView!!.left
+                        val closedLeft = mRectMainClose.left
+                        val openLeft = mRectMainClose.left - mSecondaryView!!.width
+                        val threshold = closedLeft - (mSecondaryView!!.width / 2)
+                        
+                        if (currentLeft < threshold) {
+                            open(true)
+                        } else {
+                            close(true)
+                        }
                     }
                 }
 
-                DRAG_EDGE_LEFT -> if (velRightExceeded) {
-                    open(true)
-                } else if (velLeftExceeded) {
-                    close(true)
-                } else {
-                    if (mMainView!!.left < pivotHorizontal) {
+                DRAG_EDGE_LEFT -> {
+                    if (velRightExceeded) {
+                        open(true)
+                    } else if (velLeftExceeded) {
                         close(true)
                     } else {
-                        open(true)
+                        // Use position-based logic for snap decision
+                        val currentLeft = mMainView!!.left
+                        val closedLeft = mRectMainClose.left
+                        val openLeft = mRectMainClose.left + mSecondaryView!!.width
+                        val threshold = closedLeft + (mSecondaryView!!.width / 2)
+                        
+                        if (currentLeft > threshold) {
+                            open(true)
+                        } else {
+                            close(true)
+                        }
                     }
                 }
             }
