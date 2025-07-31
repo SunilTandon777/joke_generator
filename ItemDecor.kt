@@ -288,6 +288,41 @@ class ItemDecor : ConstraintLayout {
         isDragLocked = drag
     }
 
+    /**
+     * Manually trigger open for testing - call this to test if swipe works
+     */
+    fun testOpen() {
+        open(true)
+    }
+
+    /**
+     * Manually trigger close for testing - call this to test if swipe works
+     */
+    fun testClose() {
+        close(true)
+    }
+
+    /**
+     * Get current drag edge for debugging
+     */
+    fun getCurrentDragEdge(): Int {
+        return mDragEdge
+    }
+
+    /**
+     * Check if views are properly initialized
+     */
+    fun isViewsInitialized(): Boolean {
+        return mMainView != null && mSecondaryView != null
+    }
+
+    /**
+     * Get secondary view width for debugging
+     */
+    fun getSecondaryViewWidth(): Int {
+        return mSecondaryView?.width ?: 0
+    }
+
     private val mainOpenLeft: Int
         get() = when (mDragEdge) {
             DRAG_EDGE_LEFT -> mRectMainClose.left + (mSecondaryView?.width ?: 0)
@@ -380,10 +415,16 @@ class ItemDecor : ConstraintLayout {
             mDragEdge = a.getInteger(R.styleable.SwipeRevealLayout_dragFromEdge, DRAG_EDGE_LEFT)
             isDragLocked = a.getBoolean(R.styleable.SwipeRevealLayout_lockDrag, false)
             a.recycle()
-            mMode = MODE_NORMAL
-            mMinFlingVelocity = DEFAULT_MIN_FLING_VELOCITY
-            mMinDistRequestDisallowParent = DEFAULT_MIN_DIST_REQUEST_DISALLOW_PARENT
+        } else {
+            // Default values when no attributes
+            mDragEdge = DRAG_EDGE_RIGHT  // Default to right for your use case
+            isDragLocked = false
         }
+        
+        mMode = MODE_NORMAL
+        mMinFlingVelocity = DEFAULT_MIN_FLING_VELOCITY
+        mMinDistRequestDisallowParent = DEFAULT_MIN_DIST_REQUEST_DISALLOW_PARENT
+        
         mDragHelper = ViewDragHelper.create(this, 1.0f, mDragHelperCallback)
         mDragHelper?.setEdgeTrackingEnabled(ViewDragHelper.EDGE_ALL)
         mGestureDetector = GestureDetectorCompat(context!!, mGestureListener)

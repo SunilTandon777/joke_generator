@@ -1,0 +1,625 @@
+<com.fincare.mcollection.swipeAction.ItemDecor
+    android:id="@+id/srl"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/_3sdp"
+    android:layout_marginEnd="@dimen/margin15"
+    app:dragFromEdge="right">
+
+    <!-- FIRST CHILD: Secondary view (action buttons) - positioned behind -->
+    <LinearLayout
+        android:id="@+id/actionButtonsLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:id="@+id/llAbsent"
+            android:layout_width="@dimen/_60sdp"
+            android:layout_height="match_parent"
+            android:background="@color/red"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="@dimen/_20sdp"
+                android:layout_height="@dimen/_20sdp"
+                android:src="@drawable/ic_absent" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:gravity="center"
+                android:text="@string/absent"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_8sdp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/llNoCollection"
+            android:layout_width="@dimen/_70sdp"
+            android:layout_height="match_parent"
+            android:background="@color/purpleB77EFF"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="@dimen/_20sdp"
+                android:layout_height="@dimen/_20sdp"
+                android:src="@drawable/ic_nocollection" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:gravity="center"
+                android:text="@string/no_collection"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_8sdp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/llCall"
+            android:layout_width="@dimen/_60sdp"
+            android:layout_height="match_parent"
+            android:background="@color/green"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:layout_width="@dimen/_20sdp"
+                android:layout_height="@dimen/_20sdp"
+                android:src="@drawable/ic_call" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:gravity="center"
+                android:text="@string/call"
+                android:textColor="@color/white"
+                android:textSize="@dimen/_8sdp" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- SECOND CHILD: Main view (customer layout) - positioned on top -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/customerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        android:layout_marginTop="@dimen/_5sdp"
+        android:foreground="?android:attr/selectableItemBackground"
+        android:elevation="2dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/customerCheck"
+            android:layout_width="22dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:button="@drawable/check_box_bg"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/customerListLayout"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/customerListLayout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="3dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="7dp"
+            android:paddingTop="5dp"
+            android:minHeight="110dp"
+            android:background="@drawable/bg_white_border_white_stroke_8"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/customerCheck"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintVertical_bias="0.5">
+
+            <ImageView
+                android:id="@+id/ivMarker"
+                style="@style/Text_Medium_normal"
+                android:layout_width="26dp"
+                android:layout_height="31dp"
+                android:layout_marginEnd="@dimen/_7sdp"
+                android:padding="4dp"
+                android:src="@drawable/ic_marker_big"
+                android:textColor="#000000"
+                android:textSize="@dimen/_7sdp"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/tv_customer_name"
+                style="@style/Text_Medium_normal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="@dimen/_12sdp"
+                android:ellipsize="marquee"
+                android:fadingEdge="horizontal"
+                android:focusable="true"
+                android:marqueeRepeatLimit="marquee_forever"
+                android:maxEms="11"
+                android:scrollHorizontally="true"
+                android:singleLine="true"
+                android:textColor="#000000"
+                android:textSize="@dimen/_14ssp"
+                app:layout_constraintBottom_toTopOf="@id/tv_account_number"
+                app:layout_constraintEnd_toStartOf="@id/cl_paid_status"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toEndOf="@id/ivMarker"
+                app:layout_constraintTop_toTopOf="@id/ivMarker"
+                tools:text="Customer Name" />
+
+            <TextView
+                android:id="@+id/tv_account_number"
+                style="@style/Text_Medium_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/_12sdp"
+                android:textColor="@color/black"
+                android:textSize="@dimen/_10ssp"
+                app:layout_constraintBottom_toBottomOf="@id/ivMarker"
+                app:layout_constraintEnd_toStartOf="@id/cl_paid_status"
+                app:layout_constraintHorizontal_chainStyle="packed"
+                app:layout_constraintStart_toStartOf="@id/tv_customer_name"
+                app:layout_constraintTop_toBottomOf="@id/tv_customer_name"
+                tools:text="A/c: 167538926233" />
+
+            <TextView
+                android:id="@+id/tvEmiDueAmountTitle"
+                android:fontFamily="@font/montserrat_semibold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_3sdp"
+                android:text="EMI : ₹ "
+                android:textColor="@color/black"
+                android:textSize="@dimen/_10ssp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@id/tvOverdueAmount"
+                app:layout_constraintEnd_toStartOf="@id/tvEmiDueAmountValue"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintHorizontal_chainStyle="packed"
+                app:layout_constraintStart_toStartOf="@id/tv_account_number"
+                app:layout_constraintTop_toBottomOf="@id/tv_account_number"
+                app:layout_constraintVertical_bias="0"
+                app:layout_constraintVertical_chainStyle="packed"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/tvEmiDueAmountValue"
+                style="@style/Text_Secondary_Bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="@color/black"
+                android:textSize="@dimen/_7ssp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="@id/tvEmiDueAmountTitle"
+                app:layout_constraintEnd_toStartOf="@id/viewDivider"
+                app:layout_constraintStart_toEndOf="@id/tvEmiDueAmountTitle"
+                app:layout_constraintTop_toTopOf="@id/tvEmiDueAmountTitle" />
+
+            <View
+                android:id="@+id/viewDivider"
+                android:layout_width="1dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="@dimen/_4sdp"
+                android:background="@color/black"
+                android:visibility="invisible"
+                app:layout_constraintBottom_toBottomOf="@id/tvEmiDueAmountTitle"
+                app:layout_constraintEnd_toStartOf="@id/tvOverdueAmount"
+                app:layout_constraintStart_toEndOf="@id/tvEmiDueAmountValue"
+                app:layout_constraintTop_toTopOf="@id/tvEmiDueAmountTitle" />
+
+            <TextView
+                android:id="@+id/tvOverdueAmount"
+                style="@style/Text_Semibold_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/_1sdp"
+                android:drawableStart="@drawable/ic_overdue"
+                android:drawablePadding="5dp"
+                android:gravity="center_vertical"
+                android:text="Overdue: ₹%1$s"
+                android:textColor="@color/purple_pink"
+                android:textSize="@dimen/_10ssp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@+id/llAdvancePayment"
+                app:layout_constraintEnd_toEndOf="@id/tvEmiDueAmountValue"
+                app:layout_constraintHorizontal_bias="0"
+                app:layout_constraintStart_toStartOf="@id/tv_account_number"
+                app:layout_constraintTop_toBottomOf="@+id/tvEmiDueAmountTitle"
+                app:layout_constraintVertical_bias="0.0"
+                tools:visibility="visible" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/cl_paid_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toTopOf="@id/llAdvancePayment"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="1"
+                app:layout_constraintHorizontal_chainStyle="spread_inside"
+                app:layout_constraintStart_toEndOf="@id/tv_account_number"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0"
+                app:layout_constraintVertical_chainStyle="packed">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tvEmiamountDisplayPaidPartial"
+                    style="@style/Text_Secondary_Bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="1dp"
+                    android:drawablePadding="@dimen/margin5"
+                    android:gravity="center|end"
+                    android:paddingBottom="@dimen/margin3"
+                    android:text="Paid (Partial)"
+                    android:textColor="@color/green"
+                    android:textSize="@dimen/_8ssp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:ignore="SpUsage"
+                    tools:visibility="visible" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tvEmiamountDisplayPaidAmount"
+                    style="@style/Text_Secondary_Bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="1dp"
+                    android:drawablePadding="@dimen/margin5"
+                    android:gravity="end"
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/green"
+                    android:textSize="@dimen/_12ssp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvEmiamountDisplayPaidPartial"
+                    tools:text="₹40,000" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tvEmiamountDisplayPaid"
+                    style="@style/Text_Secondary_Bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="1dp"
+                    android:drawableStart="@drawable/ic_green_tick"
+                    android:drawablePadding="@dimen/margin5"
+                    android:gravity="center_vertical|end"
+                    android:text="Cash Paid"
+                    android:textColor="@color/green"
+                    android:textSize="@dimen/_8ssp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvEmiamountDisplayPaidAmount" />
+
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:id="@+id/etEmiamountDisplay"
+                    style="@style/Text_Medium_title2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="1dp"
+                    android:background="@drawable/grey_outline"
+                    android:drawableStart="@drawable/ic_indian_rupee_symbol"
+                    android:drawablePadding="@dimen/margin5"
+                    android:gravity="center"
+                    android:inputType="numberDecimal"
+                    android:maxLength="9"
+                    android:minWidth="@dimen/margin20"
+                    android:layout_marginTop="@dimen/_3sdp"
+                    android:paddingHorizontal="@dimen/margin10"
+                    android:paddingVertical="@dimen/margin5"
+                    android:text=""
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/_8sdp"
+                    android:visibility="gone"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvEmiamountDisplayPaid"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tvPendingCorrection"
+                    style="@style/Text_Medium_normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/margin5"
+                    android:drawablePadding="5dp"
+                    android:gravity="center"
+                    android:text="@string/pending_correction"
+                    android:textColor="@color/red"
+                    android:textSize="@dimen/_8ssp"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_overdue"
+                    app:drawableTint="@color/red"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/etEmiamountDisplay"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tvReversalRequested"
+                    style="@style/Text_Medium_normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="5dp"
+                    android:gravity="center"
+                    android:text="@string/reversal_is_requested"
+                    android:textColor="@color/purple_pink"
+                    android:textSize="@dimen/_8ssp"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_overdue"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvPendingCorrection"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tvabsent"
+                    style="@style/Text_Medium_normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="@dimen/_2sdp"
+                    android:drawablePadding="5dp"
+                    android:gravity="end"
+                    android:text="@string/absent"
+                    android:textColor="@color/red"
+                    android:textSize="@dimen/_8ssp"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_overdue"
+                    app:drawableTint="@color/red"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvReversalRequested"
+                    tools:visibility="visible" />
+
+                <TextView
+                    android:id="@+id/tvnocollection"
+                    style="@style/Text_Medium_normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawablePadding="5dp"
+                    android:gravity="center"
+                    android:text="@string/no_collection"
+                    android:textColor="@color/purple_pink"
+                    android:textSize="@dimen/_8ssp"
+                    android:visibility="gone"
+                    app:drawableStartCompat="@drawable/ic_overdue"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvabsent"
+                    tools:visibility="visible" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/llAdvancePayment"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:visibility="gone"
+                android:padding="@dimen/_5sdp"
+                android:layout_marginTop="@dimen/_5sdp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cl_paid_status"
+                app:layout_constraintVertical_bias="0"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/tvAdvancePayment"
+                    android:fontFamily="@font/montserrat_regular"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="9dp"
+                    android:layout_marginStart="7dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:singleLine="true"
+                    android:text="@string/advance_payment"
+                    android:drawablePadding="@dimen/_5sdp"
+                    android:textColor="#000000"
+                    android:textSize="@dimen/_14ssp"
+                    app:drawableEndCompat="@drawable/ic_outline_info"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/advancePaymentSwitch"
+                    app:layout_constraintHorizontal_chainStyle="spread_inside"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0" />
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/advancePaymentSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    android:thumb="@drawable/customized_switch_thumb"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/tvAdvancePayment"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:track="@drawable/customized_switch_track" />
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/tv_info"
+                    style="@style/Text_Medium_normal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/rectangle_789"
+                    android:elevation="@dimen/_5sdp"
+                    android:gravity="center"
+                    android:paddingHorizontal="@dimen/_6sdp"
+                    android:paddingVertical="@dimen/_4sdp"
+                    android:text="Same as EMI amount"
+                    android:textSize="@dimen/_9ssp"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/advancePaymentSwitch"
+                    app:layout_constraintHorizontal_bias="0.3"
+                    app:layout_constraintStart_toStartOf="@id/tvAdvancePayment"
+                    app:layout_constraintTop_toBottomOf="@id/advancePaymentSwitch"
+                    app:layout_constraintVertical_bias="0" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.Group
+                android:id="@+id/groupELa"
+                android:visibility="gone"
+                tools:visibility="visible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:constraint_referenced_ids="divider, llElaContainer"/>
+
+            <com.google.android.material.divider.MaterialDivider
+                android:id="@+id/divider"
+                android:layout_marginTop="@dimen/_5sdp"
+                app:layout_constraintTop_toBottomOf="@id/llAdvancePayment"
+                app:layout_constraintBottom_toTopOf="@id/llElaContainer"
+                app:dividerColor="@color/dividerGray"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"/>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/llElaContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_white_border_white_stroke_8"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginHorizontal="@dimen/_5sdp"
+                android:layout_marginVertical="@dimen/_8sdp"
+                android:padding="8dp"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/divider"
+                app:layout_constraintBottom_toTopOf="@id/tv_action_required"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/tvElaAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserrat_medium"
+                    android:text="ELA :"
+                    android:textColor="@color/purple_dark"
+                    android:textSize="12sp"
+                    app:layout_constraintBottom_toTopOf="@id/tvInterested"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_chainStyle="packed" />
+
+                <TextView
+                    android:id="@+id/tvElaAmountValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/_2sdp"
+                    android:fontFamily="@font/montserrat_semibold"
+                    android:text="₹40,000"
+                    android:textColor="@color/purple_dark"
+                    android:textSize="12sp"
+                    app:layout_constraintBottom_toBottomOf="@id/tvElaAmount"
+                    app:layout_constraintHorizontal_bias="0"
+                    app:layout_constraintHorizontal_chainStyle="packed"
+                    app:layout_constraintStart_toEndOf="@id/tvElaAmount"
+                    app:layout_constraintTop_toTopOf="@id/tvElaAmount" />
+
+                <TextView
+                    android:id="@+id/tvInterested"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Interested ?"
+                    android:textColor="#808080"
+                    android:textSize="9sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="@id/tvElaAmount"
+                    app:layout_constraintTop_toBottomOf="@id/tvElaAmount" />
+
+                <Button
+                    android:id="@+id/btnYes"
+                    android:layout_width="46dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_ela_yes_btn"
+                    android:fontFamily="@font/montserrat_medium"
+                    android:text="Yes"
+                    android:textColor="@color/green008033"
+                    android:textSize="12sp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnNo"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintHorizontal_chainStyle="packed"
+                    app:layout_constraintStart_toEndOf="@id/tvElaAmountValue"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <Button
+                    android:id="@+id/btnNo"
+                    android:layout_width="46dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="@dimen/_8sdp"
+                    android:background="@drawable/bg_ela_no_btn"
+                    android:fontFamily="@font/montserrat_medium"
+                    android:text="No"
+                    android:textColor="@color/redCF2433"
+                    android:textSize="12sp"
+                    app:layout_constraintBottom_toBottomOf="@id/btnYes"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="1"
+                    app:layout_constraintStart_toEndOf="@id/btnYes"
+                    app:layout_constraintTop_toTopOf="@id/btnYes" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.appcompat.widget.AppCompatTextView
+                android:id="@+id/tv_action_required"
+                style="@style/Text_Medium_normal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/round_solid_top_white"
+                android:backgroundTint="@color/light_pink"
+                android:paddingStart="@dimen/_12sdp"
+                android:paddingTop="@dimen/_3sdp"
+                android:paddingEnd="@dimen/_8sdp"
+                android:paddingBottom="@dimen/_3sdp"
+                android:text="@string/action_required"
+                android:textColor="@color/red"
+                android:textSize="@dimen/_9ssp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/llElaContainer"
+                tools:visibility="visible" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.fincare.mcollection.swipeAction.ItemDecor>
