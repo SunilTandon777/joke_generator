@@ -43,6 +43,9 @@ class ItemDecor : ConstraintLayout {
     @Volatile
     private var mIsScrolling = false
 
+    @Volatile
+    private var mIsDragging = false
+
     /**
      * @return true if the drag/swipe motion is currently locked.
      */
@@ -83,6 +86,13 @@ class ItemDecor : ConstraintLayout {
         val bundle = state as Bundle?
         state = bundle!!.getParcelable(SUPER_INSTANCE_STATE)
         super.onRestoreInstanceState(state)
+    }
+
+    override fun requestLayout() {
+        // Suppress layout requests during drag operations to prevent ConstraintLayout interference
+        if (!mIsDragging) {
+            super.requestLayout()
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -154,6 +164,9 @@ class ItemDecor : ConstraintLayout {
     override fun computeScroll() {
         if (mDragHelper!!.continueSettling(true)) {
             ViewCompat.postInvalidateOnAnimation(this)
+        } else {
+            // Animation completed, clear dragging flag
+            mIsDragging = false
         }
     }
 
@@ -168,6 +181,7 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainOpen.left, mRectMainOpen.top)
         } else {
             mDragHelper!!.abort()
+            mIsDragging = false
             mMainView!!.layout(
                 mRectMainOpen.left,
                 mRectMainOpen.top,
@@ -195,6 +209,7 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
             mDragHelper!!.abort()
+            mIsDragging = false
             mMainView!!.layout(
                 mRectMainClose.left,
                 mRectMainClose.top,
@@ -391,6 +406,7 @@ class ItemDecor : ConstraintLayout {
         override fun tryCaptureView(child: View, pointerId: Int): Boolean {
             if (isDragLocked || mMainView == null) return false
             mDragHelper!!.captureChildView(mMainView!!, pointerId)
+            mIsDragging = true
             return false
         }
 
@@ -411,7 +427,13 @@ class ItemDecor : ConstraintLayout {
             }
         }
 
+        override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
+            // Prevent any vertical movement during horizontal dragging
+            return child.top
+        }
+
         override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
+            mIsDragging = false
             if (mMainView == null) return
             val velRightExceeded = pxToDp(xvel.toInt()) >= mMinFlingVelocity
             val velLeftExceeded = pxToDp(xvel.toInt()) <= -mMinFlingVelocity
@@ -464,7 +486,7 @@ class ItemDecor : ConstraintLayout {
             dx: Int,
             dy: Int
         ) {
-            super.onViewPositionChanged(changedView, left, top, dx, dy)
+            // Don't call super to avoid ConstraintLayout interference during drag
             if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
                 if (mDragEdge == DRAG_EDGE_LEFT || mDragEdge == DRAG_EDGE_RIGHT) {
                     mSecondaryView!!.offsetLeftAndRight(dx)
