@@ -136,7 +136,7 @@ class ItemDecor : ConstraintLayout {
         // Apply any offset for SAME_LEVEL mode
         if (mMode == MODE_SAME_LEVEL && mSecondaryView != null) {
             when (mDragEdge) {
-                DRAG_EDGE_LEFT -> mSecondaryView!!.offsetLeftAndRight(-mSecondaryView!!.width)
+                DRAG_EDGE_LEFT -> mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
                 DRAG_EDGE_RIGHT -> mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
             }
             // Update rects after offset
@@ -220,7 +220,7 @@ class ItemDecor : ConstraintLayout {
 
     private val mainOpenLeft: Int
         get() = when (mDragEdge) {
-            DRAG_EDGE_LEFT -> mRectMainClose.left + (mSecondaryView?.width ?: 0)
+            DRAG_EDGE_LEFT -> mRectMainClose.left - (mSecondaryView?.width ?: 0)
             DRAG_EDGE_RIGHT -> mRectMainClose.left - (mSecondaryView?.width ?: 0)
             else -> 0
         }
@@ -233,7 +233,10 @@ class ItemDecor : ConstraintLayout {
             }
         }
     private val secOpenLeft: Int
-        get() = mRectSecClose.left
+        get() = when (mDragEdge) {
+            DRAG_EDGE_LEFT -> mRectMainClose.right
+            else -> mRectSecClose.left
+        }
     private val secOpenTop: Int
         get() = mRectSecClose.top
 
@@ -379,7 +382,7 @@ class ItemDecor : ConstraintLayout {
         private get() {
             if (mSecondaryView == null) return 0
             return if (mDragEdge == DRAG_EDGE_LEFT) {
-                mRectMainClose.left + mSecondaryView!!.width / 2
+                mRectMainClose.left - mSecondaryView!!.width / 2
             } else {
                 mRectMainClose.right - mSecondaryView!!.width / 2
             }
@@ -396,15 +399,12 @@ class ItemDecor : ConstraintLayout {
             return when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> max(
                     min(left.toDouble(), mRectMainClose.left.toDouble()),
-                    (
-                            mRectMainClose.left - mSecondaryView!!.width
-                            ).toDouble()
+                    (mRectMainClose.left - mSecondaryView!!.width).toDouble()
                 ).toInt()
 
                 DRAG_EDGE_LEFT -> max(
-                    min(left.toDouble(), (mRectMainClose.left + mSecondaryView!!.width).toDouble()),
-                    mRectMainClose.left
-                        .toDouble()
+                    min(left.toDouble(), mRectMainClose.left.toDouble()),
+                    (mRectMainClose.left - mSecondaryView!!.width).toDouble()
                 ).toInt()
 
                 else -> child.left
@@ -430,11 +430,11 @@ class ItemDecor : ConstraintLayout {
                 }
 
                 DRAG_EDGE_LEFT -> if (velRightExceeded) {
-                    open(true)
-                } else if (velLeftExceeded) {
                     close(true)
+                } else if (velLeftExceeded) {
+                    open(true)
                 } else {
-                    if (mMainView!!.left < pivotHorizontal) {
+                    if (mMainView!!.left > pivotHorizontal) {
                         close(true)
                     } else {
                         open(true)
