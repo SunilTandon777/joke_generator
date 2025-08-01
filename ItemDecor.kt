@@ -113,13 +113,23 @@ class ItemDecor : ConstraintLayout {
     override fun onFinishInflate() {
         super.onFinishInflate()
 
-        // get views
-        if (childCount >= 2) {
-            mSecondaryView = getChildAt(0)
-            mMainView = getChildAt(1)
-        } else if (childCount == 1) {
-            mMainView = getChildAt(0)
+        // Ensure we have the correct number of children
+        if (childCount < 2) {
+            throw IllegalStateException("ItemDecor requires exactly 2 children: secondary view (action buttons) and main view (content)")
         }
+
+        // Get views - CRITICAL: First child = secondary (action buttons), Second child = main (content)
+        mSecondaryView = getChildAt(0)  // Action buttons (background)
+        mMainView = getChildAt(1)       // Main content (foreground)
+        
+        // Validate views
+        if (mSecondaryView == null || mMainView == null) {
+            throw IllegalStateException("Failed to initialize views properly")
+        }
+        
+        // Ensure main view has higher elevation to stay on top initially
+        mMainView!!.elevation = 2f
+        mSecondaryView!!.elevation = 0f
     }
 
     /**
@@ -132,13 +142,48 @@ class ItemDecor : ConstraintLayout {
         super.onLayout(changed, left, top, right, bottom)
         
         // Only proceed if we have both views
-        if (mMainView == null || mSecondaryView == null) return
+        if (mMainView == null || mSecondaryView == null) {
+            return
+        }
+        
+        // CRITICAL: Ensure proper initial positioning
+        // Main view should cover the entire area initially (closed state)
+        // Secondary view should be positioned but hidden behind main view
         
         // Store the constraint-based positions as our base positions
-        // These positions now reflect the dynamic sizing from ConstraintLayout
         initRects()
         
-        // Apply any offset for SAME_LEVEL mode after constraint layout is complete
+        // For DRAG_EDGE_RIGHT: Secondary view should be at the right edge, main view covers it
+        if (mDragEdge == DRAG_EDGE_RIGHT) {
+            // Ensure secondary view is positioned at the right edge
+            val secondaryLeft = width - mSecondaryView!!.width
+            val secondaryTop = mMainView!!.top
+            val secondaryRight = width
+            val secondaryBottom = mMainView!!.bottom
+            
+            // Position secondary view at right edge if not already there
+            if (mSecondaryView!!.left != secondaryLeft) {
+                mSecondaryView!!.layout(secondaryLeft, secondaryTop, secondaryRight, secondaryBottom)
+            }
+            
+            // Ensure main view covers the full width initially (closed state)
+            val mainLeft = 0
+            val mainTop = mMainView!!.top
+            val mainRight = width
+            val mainBottom = mMainView!!.bottom
+            
+            // Only reposition main view if not currently dragging
+            if (!isDragging()) {
+                if (mMainView!!.left != mainLeft || mMainView!!.right != mainRight) {
+                    mMainView!!.layout(mainLeft, mainTop, mainRight, mainBottom)
+                }
+            }
+        }
+        
+        // Update rects after positioning
+        initRects()
+        
+        // Apply SAME_LEVEL mode offsets if needed
         if (mMode == MODE_SAME_LEVEL) {
             when (mDragEdge) {
                 DRAG_EDGE_LEFT -> {
@@ -148,12 +193,11 @@ class ItemDecor : ConstraintLayout {
                     mSecondaryView!!.offsetLeftAndRight(mSecondaryView!!.width)
                 }
             }
-            // Update rects after offset to reflect the new positions
+            // Update rects after offset
             initRects()
         }
         
-        // Apply initial state (open/closed) based on current positions
-        // Only if we're not currently in a drag operation
+        // Apply initial state (open/closed) only if not currently dragging
         if (!isDragging()) {
             if (mIsOpenBeforeInit) {
                 open(false)
@@ -198,29 +242,24 @@ class ItemDecor : ConstraintLayout {
         mIsOpenBeforeInit = true
         if (mMainView == null || mSecondaryView == null) return
         
-        // Calculate the exact open position based on secondary view width and drag direction
-        val closedLeft = mRectMainClose.left
-        val secondaryWidth = mSecondaryView!!.width
-        val targetLeft = when (mDragEdge) {
-            DRAG_EDGE_RIGHT -> closedLeft - secondaryWidth  // Move main view LEFT to reveal buttons on RIGHT
-            DRAG_EDGE_LEFT -> closedLeft + secondaryWidth   // Move main view RIGHT to reveal buttons on LEFT
-            else -> closedLeft
-        }
-        
         if (animation) {
-            mDragHelper!!.smoothSlideViewTo(mMainView!!, targetLeft, mRectMainClose.top)
+            mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainOpen.left, mRectMainOpen.top)
         } else {
             mDragHelper!!.abort()
             // Position main view at exact open position
-            layoutViewSafely(
-                mMainView!!,
-                targetLeft,
-                mRectMainClose.top,
-                targetLeft + mMainView!!.width,
-                mRectMainClose.bottom
+            mMainView!!.layout(
+                mRectMainOpen.left,
+                mRectMainOpen.top,
+                mRectMainOpen.right,
+                mRectMainOpen.bottom
             )
-            // Secondary view stays in its original constraint-based position (don't move it)
-            // This ensures the action buttons stay visible on the right side
+            // Ensure secondary view is in correct position
+            mSecondaryView!!.layout(
+                mRectSecOpen.left,
+                mRectSecOpen.top,
+                mRectSecOpen.right,
+                mRectSecOpen.bottom
+            )
         }
         ViewCompat.postInvalidateOnAnimation(this)
     }
@@ -236,16 +275,20 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
             mDragHelper!!.abort()
-            // Position main view back to exact closed position (covering the action buttons)
-            layoutViewSafely(
-                mMainView!!,
+            // Position main view back to exact closed position
+            mMainView!!.layout(
                 mRectMainClose.left,
                 mRectMainClose.top,
                 mRectMainClose.right,
                 mRectMainClose.bottom
             )
-            // Secondary view stays in its original constraint-based position (don't move it)
-            // Action buttons remain in place, just covered by main view
+            // Ensure secondary view is in correct position
+            mSecondaryView!!.layout(
+                mRectSecClose.left,
+                mRectSecClose.top,
+                mRectSecClose.right,
+                mRectSecClose.bottom
+            )
         }
         ViewCompat.postInvalidateOnAnimation(this)
     }
@@ -333,36 +376,51 @@ class ItemDecor : ConstraintLayout {
     private fun initRects() {
         if (mMainView == null || mSecondaryView == null) return
         
-        // Store current constraint-based positions as base positions
-        // These positions now include any dynamic sizing from constraints
-        mRectMainClose.set(
-            mMainView!!.left, 
-            mMainView!!.top, 
-            mMainView!!.right, 
-            mMainView!!.bottom
-        )
-
-        mRectSecClose.set(
-            mSecondaryView!!.left, 
-            mSecondaryView!!.top, 
-            mSecondaryView!!.right,
-            mSecondaryView!!.bottom
-        )
-
-        // Calculate open positions based on current (potentially dynamic) sizes
-        mRectMainOpen.set(
-            mainOpenLeft, 
-            mainOpenTop, 
-            mainOpenLeft + mMainView!!.width,
-            mainOpenTop + mMainView!!.height
-        )
-
-        mRectSecOpen.set(
-            secOpenLeft, 
-            secOpenTop, 
-            secOpenLeft + mSecondaryView!!.width,
-            secOpenTop + mSecondaryView!!.height
-        )
+        // CRITICAL: Define proper closed and open positions
+        
+        // For DRAG_EDGE_RIGHT (swipe from right):
+        // CLOSED: Main view covers full width, secondary view hidden on right
+        // OPEN: Main view moved left, secondary view visible on right
+        
+        when (mDragEdge) {
+            DRAG_EDGE_RIGHT -> {
+                // Closed position: Main view covers full area
+                mRectMainClose.set(0, mMainView!!.top, width, mMainView!!.bottom)
+                
+                // Secondary view position (always at right edge)
+                val secLeft = width - mSecondaryView!!.width
+                mRectSecClose.set(secLeft, mMainView!!.top, width, mMainView!!.bottom)
+                
+                // Open position: Main view moved left by secondary width
+                val openLeft = -mSecondaryView!!.width
+                mRectMainOpen.set(openLeft, mMainView!!.top, width - mSecondaryView!!.width, mMainView!!.bottom)
+                
+                // Secondary view stays in same position when open
+                mRectSecOpen.set(secLeft, mMainView!!.top, width, mMainView!!.bottom)
+            }
+            
+            DRAG_EDGE_LEFT -> {
+                // Closed position: Main view covers full area
+                mRectMainClose.set(0, mMainView!!.top, width, mMainView!!.bottom)
+                
+                // Secondary view position (always at left edge)
+                mRectSecClose.set(0, mMainView!!.top, mSecondaryView!!.width, mMainView!!.bottom)
+                
+                // Open position: Main view moved right by secondary width
+                mRectMainOpen.set(mSecondaryView!!.width, mMainView!!.top, width + mSecondaryView!!.width, mMainView!!.bottom)
+                
+                // Secondary view stays in same position when open
+                mRectSecOpen.set(0, mMainView!!.top, mSecondaryView!!.width, mMainView!!.bottom)
+            }
+            
+            else -> {
+                // Fallback to current positions
+                mRectMainClose.set(mMainView!!.left, mMainView!!.top, mMainView!!.right, mMainView!!.bottom)
+                mRectSecClose.set(mSecondaryView!!.left, mSecondaryView!!.top, mSecondaryView!!.right, mSecondaryView!!.bottom)
+                mRectMainOpen.set(mMainView!!.left, mMainView!!.top, mMainView!!.right, mMainView!!.bottom)
+                mRectSecOpen.set(mSecondaryView!!.left, mSecondaryView!!.top, mSecondaryView!!.right, mSecondaryView!!.bottom)
+            }
+        }
     }
 
     private fun couldBecomeClick(ev: MotionEvent): Boolean {
