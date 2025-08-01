@@ -198,12 +198,12 @@ class ItemDecor : ConstraintLayout {
         mIsOpenBeforeInit = true
         if (mMainView == null || mSecondaryView == null) return
         
-        // Calculate the exact open position based on secondary view width
+        // Calculate the exact open position based on secondary view width and drag direction
         val closedLeft = mRectMainClose.left
         val secondaryWidth = mSecondaryView!!.width
         val targetLeft = when (mDragEdge) {
-            DRAG_EDGE_RIGHT -> closedLeft - secondaryWidth
-            DRAG_EDGE_LEFT -> closedLeft + secondaryWidth
+            DRAG_EDGE_RIGHT -> closedLeft - secondaryWidth  // Move main view LEFT to reveal buttons on RIGHT
+            DRAG_EDGE_LEFT -> closedLeft + secondaryWidth   // Move main view RIGHT to reveal buttons on LEFT
             else -> closedLeft
         }
         
@@ -219,14 +219,8 @@ class ItemDecor : ConstraintLayout {
                 targetLeft + mMainView!!.width,
                 mRectMainClose.bottom
             )
-            // Secondary view stays in its constraint-based position
-            layoutViewSafely(
-                mSecondaryView!!,
-                mRectSecClose.left,
-                mRectSecClose.top,
-                mRectSecClose.right,
-                mRectSecClose.bottom
-            )
+            // Secondary view stays in its original constraint-based position (don't move it)
+            // This ensures the action buttons stay visible on the right side
         }
         ViewCompat.postInvalidateOnAnimation(this)
     }
@@ -242,7 +236,7 @@ class ItemDecor : ConstraintLayout {
             mDragHelper!!.smoothSlideViewTo(mMainView!!, mRectMainClose.left, mRectMainClose.top)
         } else {
             mDragHelper!!.abort()
-            // Position main view back to exact closed position
+            // Position main view back to exact closed position (covering the action buttons)
             layoutViewSafely(
                 mMainView!!,
                 mRectMainClose.left,
@@ -250,14 +244,8 @@ class ItemDecor : ConstraintLayout {
                 mRectMainClose.right,
                 mRectMainClose.bottom
             )
-            // Secondary view stays in its constraint-based position
-            layoutViewSafely(
-                mSecondaryView!!,
-                mRectSecClose.left,
-                mRectSecClose.top,
-                mRectSecClose.right,
-                mRectSecClose.bottom
-            )
+            // Secondary view stays in its original constraint-based position (don't move it)
+            // Action buttons remain in place, just covered by main view
         }
         ViewCompat.postInvalidateOnAnimation(this)
     }
@@ -533,11 +521,13 @@ class ItemDecor : ConstraintLayout {
             
             return when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> {
-                    // For right edge drag, main view can move left by at most secondary view width
-                    val minAllowedLeft = closedLeft - secondaryWidth
-                    val maxAllowedLeft = closedLeft
+                    // For right edge drag (swipe left to reveal), main view moves LEFT
+                    // Closed position: normal position
+                    // Open position: moved left by secondary width to reveal buttons on right
+                    val minAllowedLeft = closedLeft - secondaryWidth  // Fully open (moved left)
+                    val maxAllowedLeft = closedLeft                   // Fully closed (normal position)
                     
-                    // Strictly enforce boundaries
+                    // Clamp the position
                     when {
                         left < minAllowedLeft -> minAllowedLeft
                         left > maxAllowedLeft -> maxAllowedLeft
@@ -546,11 +536,11 @@ class ItemDecor : ConstraintLayout {
                 }
 
                 DRAG_EDGE_LEFT -> {
-                    // For left edge drag, main view can move right by at most secondary view width
-                    val minAllowedLeft = closedLeft
-                    val maxAllowedLeft = closedLeft + secondaryWidth
+                    // For left edge drag (swipe right to reveal), main view moves RIGHT  
+                    val minAllowedLeft = closedLeft                   // Fully closed (normal position)
+                    val maxAllowedLeft = closedLeft + secondaryWidth  // Fully open (moved right)
                     
-                    // Strictly enforce boundaries
+                    // Clamp the position
                     when {
                         left < minAllowedLeft -> minAllowedLeft
                         left > maxAllowedLeft -> maxAllowedLeft
@@ -563,7 +553,7 @@ class ItemDecor : ConstraintLayout {
         }
 
         override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
-            // Absolutely no vertical movement allowed for any child during horizontal swipe
+            // Lock vertical movement for main view during horizontal swipe
             if (child == mMainView && mMainView != null) {
                 return mRectMainClose.top
             }
@@ -580,13 +570,13 @@ class ItemDecor : ConstraintLayout {
         }
 
         override fun getViewVerticalDragRange(child: View): Int {
-            // Absolutely no vertical drag allowed for any view
+            // No vertical drag allowed
             return 0
         }
 
         override fun onViewDragStateChanged(state: Int) {
             super.onViewDragStateChanged(state)
-            // Force invalidation on state changes to ensure proper rendering
+            // Force invalidation on state changes
             ViewCompat.postInvalidateOnAnimation(this@ItemDecor)
         }
 
@@ -602,26 +592,28 @@ class ItemDecor : ConstraintLayout {
             
             when (mDragEdge) {
                 DRAG_EDGE_RIGHT -> {
+                    // For right edge drag: swipe LEFT to open, swipe RIGHT to close
                     val openLeft = closedLeft - secondaryWidth
                     val threshold = closedLeft - (secondaryWidth / 2)
                     
                     when {
-                        velRightExceeded -> close(true)
-                        velLeftExceeded -> open(true)
-                        currentLeft <= threshold -> open(true)
-                        else -> close(true)
+                        velLeftExceeded -> open(true)    // Fast swipe left = open
+                        velRightExceeded -> close(true)  // Fast swipe right = close
+                        currentLeft <= threshold -> open(true)   // Past halfway = open
+                        else -> close(true)              // Before halfway = close
                     }
                 }
 
                 DRAG_EDGE_LEFT -> {
+                    // For left edge drag: swipe RIGHT to open, swipe LEFT to close
                     val openLeft = closedLeft + secondaryWidth
                     val threshold = closedLeft + (secondaryWidth / 2)
                     
                     when {
-                        velRightExceeded -> open(true)
-                        velLeftExceeded -> close(true)
-                        currentLeft >= threshold -> open(true)
-                        else -> close(true)
+                        velRightExceeded -> open(true)   // Fast swipe right = open
+                        velLeftExceeded -> close(true)   // Fast swipe left = close
+                        currentLeft >= threshold -> open(true)   // Past halfway = open
+                        else -> close(true)              // Before halfway = close
                     }
                 }
             }
@@ -633,10 +625,11 @@ class ItemDecor : ConstraintLayout {
                 return
             }
             
-            // Only allow edge drag from appropriate edges
+            // For right edge drag, we want to detect swipes from the RIGHT edge of the screen
+            // For left edge drag, we want to detect swipes from the LEFT edge of the screen
             val allowEdgeDrag = when (mDragEdge) {
-                DRAG_EDGE_RIGHT -> edgeFlags == ViewDragHelper.EDGE_LEFT
-                DRAG_EDGE_LEFT -> edgeFlags == ViewDragHelper.EDGE_RIGHT
+                DRAG_EDGE_RIGHT -> edgeFlags == ViewDragHelper.EDGE_RIGHT  // Swipe from right edge
+                DRAG_EDGE_LEFT -> edgeFlags == ViewDragHelper.EDGE_LEFT    // Swipe from left edge
                 else -> false
             }
             
@@ -657,27 +650,27 @@ class ItemDecor : ConstraintLayout {
             // Only handle position changes for the main view
             if (changedView != mMainView || mSecondaryView == null) return
             
-            // Double-check bounds to prevent any layout corruption
+            // Validate bounds to prevent layout corruption
             val parentWidth = width
             val parentHeight = height
             val viewWidth = changedView.width
             val viewHeight = changedView.height
             
-            // Validate the new position is within acceptable bounds
-            val isWithinBounds = left >= 0 && 
-                               left + viewWidth <= parentWidth && 
-                               top >= 0 && 
-                               top + viewHeight <= parentHeight
+            // Check if view is within parent bounds
+            val isWithinParentBounds = left >= -viewWidth && 
+                                     left <= parentWidth && 
+                                     top >= 0 && 
+                                     top + viewHeight <= parentHeight
             
-            if (!isWithinBounds) {
-                // Force a safe position reset
+            if (!isWithinParentBounds) {
+                // Force safe position reset
                 post {
                     close(false)
                 }
                 return
             }
             
-            // Additional boundary check based on drag direction and secondary view size
+            // Additional boundary check for swipe limits
             val closedLeft = mRectMainClose.left
             val secondaryWidth = mSecondaryView!!.width
             val isWithinSwipeBounds = when (mDragEdge) {
@@ -698,11 +691,10 @@ class ItemDecor : ConstraintLayout {
                 return
             }
             
-            // Handle SAME_LEVEL mode positioning
+            // Handle SAME_LEVEL mode - secondary view follows main view
             if (mMode == MODE_SAME_LEVEL) {
                 when (mDragEdge) {
                     DRAG_EDGE_LEFT, DRAG_EDGE_RIGHT -> {
-                        // Move secondary view along with main view
                         mSecondaryView!!.offsetLeftAndRight(dx)
                     }
                     else -> {
@@ -719,6 +711,36 @@ class ItemDecor : ConstraintLayout {
         val resources = context.resources
         val metrics = resources.displayMetrics
         return (px / (metrics.densityDpi.toFloat() / DisplayMetrics.DENSITY_DEFAULT)).toInt()
+    }
+
+    // Debug and testing methods
+    fun testOpen() {
+        open(true)
+    }
+
+    fun testClose() {
+        close(true)
+    }
+
+    fun getDebugInfo(): String {
+        return buildString {
+            appendLine("=== ItemDecor Debug Info ===")
+            appendLine("Child count: $childCount")
+            appendLine("Main view: ${mMainView != null}")
+            appendLine("Secondary view: ${mSecondaryView != null}")
+            appendLine("Drag edge: $mDragEdge (1=LEFT, 2=RIGHT)")
+            appendLine("Drag locked: $isDragLocked")
+            appendLine("Is open before init: $mIsOpenBeforeInit")
+            if (mMainView != null) {
+                appendLine("Main view position: (${mMainView!!.left}, ${mMainView!!.top})")
+                appendLine("Main view size: ${mMainView!!.width} x ${mMainView!!.height}")
+            }
+            if (mSecondaryView != null) {
+                appendLine("Secondary view position: (${mSecondaryView!!.left}, ${mSecondaryView!!.top})")
+                appendLine("Secondary view size: ${mSecondaryView!!.width} x ${mSecondaryView!!.height}")
+            }
+            appendLine("Parent size: $width x $height")
+        }
     }
 
     companion object {
